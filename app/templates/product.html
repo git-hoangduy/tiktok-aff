@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m with context %}
+{% block content %}
+<div class="head">
+  <h1>{{ p.name or ('Sản phẩm #' ~ p.id) }}</h1>
+  <form method="post" action="/products/{{ p.id }}/delete" onsubmit="return confirm('Xóa sản phẩm và toàn bộ video?')">
+    <button class="btn danger">Xóa sản phẩm</button></form>
+</div>
+
+<div class="card statusbar" id="pstatus" data-pid="{{ p.id }}" data-status="{{ p.status }}">
+  {{ m.status(p.status) }} <span id="pmsg">{{ p.message }}</span>
+</div>
+
+<div class="cols">
+  <section class="card">
+    <h2>Ảnh sản phẩm</h2>
+    <div class="previews">
+      {% set metas = (analysis.images if analysis else []) or [] %}
+      {% for im in images %}{% set mt = metas[loop.index0] if loop.index0 < metas|length else {} %}
+      <figure title="{{ im.reason or '' }}">
+        <img src="/media/{{ (im.cutout_path if im.mode == 'cutout' else im.path) }}" alt=""
+             class="{{ 'checker' if im.mode == 'cutout' }}">
+        <figcaption>
+          {% if mt.role %}<b>{{ mt.role }}</b>{% if analysis.best_main_image == loop.index0 %} · ảnh chính{% endif %}<br>{% endif %}
+          {% if im.mode == 'cutout' %}✔ đã tách nền
+          {% elif im.mode == 'card' %}giữ ảnh gốc (thẻ)
+          {% elif im.mode == 'skip' %}<span class="warn">không dùng</span>
+          {% else %}chưa xử lý{% endif %}
+          {% if mt.has_hand %}· có tay{% endif %}{% if mt.has_text_overlay %}· có chữ chèn{% endif %}
+          {% if im.reason %}<div class="muted">{{ im.reason[:60] }}</div>{% endif %}
+        </figcaption></figure>
+      {% endfor %}
+    </div>
+    <h2>Thông tin</h2>
+    <form method="post" action="/products/{{ p.id }}/edit">
+      <div class="grid2">
+        <label>Tên <input name="name" value="{{ p.name }}"></label>
+        <label>Ngành hàng <select name="category"><option value="auto">Tự nhận diện</option>
+          {% for k, v in CATEGORIES.items() %}<option value="{{ k }}" {{ 'selected' if p.category==k }}>{{ v }}</option>{% endfor %}</select></label>
+        <label>Giá <input name="price" value="{{ p.price }}"></label>
+        <label>Link <input name="link" value="{{ p.link }}"></label>
+      </div>
+      <label>Công dụng do bạn cung cấp <textarea name="user_info" rows="3">{{ p.user_info }}</textarea></label>
+      <label>Link video TikTok tham khảo (mỗi dòng 1 link) <textarea name="ref_links" rows="2">{{ p.ref_links or '' }}</textarea></label>
+      <button class="btn">Lưu thông tin</button>
+    </form>
+  </section>
+
+  <section class="card" id="analysis">
+    <h2>Phân tích AI <small class="muted">{{ p.analysis_source or '' }}</small></h2>
+    {% if analysis %}
+    <table class="tbl kv">
+      <tr><th>Tên</th><td>{{ analysis.product_name }}</td></tr>
+      <tr><th>Loại</th><td>{{ analysis.category }}</td></tr>
+      <tr><th>Màu sắc</th><td>{{ analysis.colors | join(', ') }}</td></tr>
+      <tr><th>Hình dáng</th><td>{{ analysis.shape }}</td></tr>
+      <tr><th>Chất liệu</th><td>{{ analysis.material }}</td></tr>
+      <tr><th>Chữ trên bao bì</th><td>{{ analysis.visible_text | join(' · ') or '—' }}</td></tr>
+      <tr><th>Đặc điểm nổi bật</th><td>{{ analysis.key_features | join('; ') or '—' }}</td></tr>
+      <tr><th>Khách hàng mục tiêu</th><td>{{ analysis.target_customers | join(', ') }}</td></tr>
+      <tr><th>Cách bày khi AI tạo ảnh</th><td>{{ analysis.staging or '(tự xác định khi dựng)' }}{% if analysis.handheld %} · <b>cho phép tay cầm</b>{% endif %}</td></tr>
+      <tr><th>Chưa xác định</th><td class="warn">{{ analysis.unknowns | join(', ') or '—' }}</td></tr>
+    </table>
+    {% if analysis.notes %}<p class="muted">{{ analysis.notes }}</p>{% endif %}
+    <details><summary>Sửa phân tích (JSON) — sửa sai trước khi viết kịch bản</summary>
+      <form method="post" action="/products/{{ p.id }}/analysis">
+        <textarea name="analysis_json" rows="14" class="mono">{{ analysis | prettyjson }}</textarea>
+        <button class="btn">Lưu phân tích</button>
+      </form>
+    </details>
+    {% else %}<p class="muted">Chưa có phân tích.</p>{% endif %}
+    <form method="post" action="/products/{{ p.id }}/analyze" class="inline">
+      {{ m.quick_options(defaults) }}
+      <button class="btn">Phân tích lại + viết 3 kịch bản</button>
+    </form>
+  </section>
+</div>
+
+<section class="card" id="trends">
+  <div class="head small"><h2>Xu hướng TikTok hiện tại
+    {% if trends %}<small class="muted">· {{ trends._created_at }} · {{ trends.sources|length }} nguồn · tóm tắt: {{ trends.summarizer }}
+      · độ tin cậy: {{ trends.report.data_quality or '?' }}</small>{% endif %}</h2>
+    <form method="post" action="/products/{{ p.id }}/trends" class="inline">
+      {{ m.quick_options(defaults) }}
+      <button class="btn">↻ Tìm xu hướng mới + viết 3 kịch bản</button>
+    </form>
+  </div>
+  {% if trends %}{% set r = trends.report %}
+    {% if r.summary %}<p>{{ r.summary }}</p>{% endif %}
+    <div class="cols">
+      <div>
+        {% if r.trending_formats %}<h3>Format đang hot</h3><ul>
+          {% for f in r.trending_formats %}<li><b>{{ f.name }}</b> — {{ f.how or f.description }}{% if f.why %} <span class="muted">({{ f.why }})</span>{% endif %}
+            {% for sid in f.src or f.source_ids or [] %}<sup>[{{ sid }}]</sup>{% endfor %}</li>{% endfor %}</ul>{% endif %}
+        {% if r.hook_patterns %}<h3>Kiểu hook đang dùng</h3><ul>
+          {% for h in r.hook_patterns %}<li><b>{{ h.pattern }}</b>{% if h.example %} — “{{ h.example }}”{% endif %}
+            {% for sid in h.src or h.source_ids or [] %}<sup>[{{ sid }}]</sup>{% endfor %}</li>{% endfor %}</ul>{% endif %}
+        {% if r.recommendations %}<h3>Gợi ý cho sản phẩm này</h3><ul>{% for x in r.recommendations %}<li>{{ x }}</li>{% endfor %}</ul>{% endif %}
+        {% if r.pacing %}<p><b>Nhịp dựng:</b> {{ r.pacing }}</p>{% endif %}
+        {% if r.music_notes %}<p><b>Âm nhạc:</b> {{ r.music_notes }}</p>{% endif %}
+        {% if r.avoid %}<p class="warn"><b>Nên tránh:</b> {{ r.avoid | join('; ') }}</p>{% endif %}
+        {% if r.hashtags %}<p><b>Hashtag:</b> {{ r.hashtags | join(' ') }}</p>{% endif %}
+      </div>
+      <div>
+        {% if r.top_videos %}<h3>Video hot để so sánh</h3>
+        <table class="tbl small">{% for v in r.top_videos %}
+          <tr><td><a href="{{ v.url | safe_url }}" target="_blank" rel="noopener">{{ (v.title or v.url)[:80] }}</a>
+            {% if v.takeaway %}<div class="muted">→ {{ v.takeaway }}</div>{% endif %}</td>
+            <td>{{ '{:,}'.format(v.views) if v.views is number else (v.views or '') }}</td></tr>{% endfor %}</table>{% endif %}
+        <details><summary>Tất cả nguồn ({{ trends.sources|length }})</summary>
+          <table class="tbl small">{% for s in trends.sources %}
+            <tr><td>[{{ s.id }}]</td><td>{{ s.type }}{% if s.platform %} · {{ s.platform }}{% endif %}</td>
+              <td><a href="{{ s.url | safe_url }}" target="_blank" rel="noopener">{{ (s.title or s.url)[:90] }}</a></td>
+              <td>{{ '{:,}'.format(s.views) if s.views is number else '' }}</td></tr>{% endfor %}</table>
+        </details>
+        {% if trends.warnings %}<details><summary class="muted">Cảnh báo khi thu thập ({{ trends.warnings|length }})</summary>
+          <ul class="small muted">{% for w in trends.warnings %}<li>{{ w }}</li>{% endfor %}</ul></details>{% endif %}
+      </div>
+    </div>
+  {% else %}<p class="muted">Chưa có dữ liệu xu hướng. Hệ thống sẽ tự tìm khi viết kịch bản.</p>{% endif %}
+</section>
+
+<section class="card" id="scripts">
+  <div class="head small"><h2>Kịch bản ({{ scripts|length }})</h2>
+    <form method="post" action="/products/{{ p.id }}/scripts" class="inline">
+      {{ m.quick_options(defaults) }}
+      <button class="btn">＋ Viết thêm 3 kịch bản</button>
+    </form>
+  </div>
+  {% for s in scripts %}
+  <details class="script" id="script-{{ s.id }}" {{ 'open' if loop.first }}>
+    <summary><b>#{{ s.id }} · {{ s.data.title }}</b> <span class="muted">{{ STYLE_LABELS.get(s.style, s.style) }} · {{ s.duration }}s · {{ s.source }}</span>
+      <span class="muted">— “{{ s.data.hook }}”</span></summary>
+    {% if s.data.trend_used or s.data.comparison %}
+    <div class="note small">
+      {% if s.data.trend_used %}<div><b>Áp dụng xu hướng:</b> {{ s.data.trend_used }}</div>{% endif %}
+      {% if s.data.comparison %}<div><b>So với video top:</b> {{ s.data.comparison }}</div>{% endif %}
+    </div>{% endif %}
+    {% if s.data.caption or s.data.hashtags %}
+    <p class="small"><b>Caption đăng TikTok:</b> {{ s.data.caption }} {{ (s.data.hashtags or []) | join(' ') }}</p>{% endif %}
+    <form method="post" action="/scripts/{{ s.id }}">
+      <label>Tiêu đề <input name="title" value="{{ s.data.title }}"></label>
+      {% for sc in s.data.scenes %}
+      <div class="scene-edit">
+        <div class="snum">{{ loop.index }}</div>
+        <div class="grow">
+          <textarea name="text_{{ loop.index0 }}" rows="2">{{ sc.text }}</textarea>
+          <div class="row">
+            <select name="visual_{{ loop.index0 }}">
+              {% for vv in ['intro','closeup','context','benefit','cta'] %}<option {{ 'selected' if sc.visual==vv }}>{{ vv }}</option>{% endfor %}
+            </select>
+            <input name="bg_{{ loop.index0 }}" value="{{ sc.background_prompt }}" placeholder="Bối cảnh (tiếng Anh)">
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+      <div class="scene-edit"><div class="snum">＋</div><div class="grow">
+        <textarea name="text_{{ s.data.scenes|length }}" rows="1" placeholder="Thêm cảnh mới (để trống nếu không cần)"></textarea>
+        <input type="hidden" name="visual_{{ s.data.scenes|length }}" value="benefit">
+        <input type="hidden" name="bg_{{ s.data.scenes|length }}" value=""></div></div>
+      <p class="muted small">Xóa hết chữ của một cảnh để bỏ cảnh đó.</p>
+      <button class="btn">Lưu kịch bản</button>
+    </form>
+    <form method="post" action="/scripts/{{ s.id }}/render" class="render-form">
+      <h3>Dựng video từ kịch bản này</h3>
+      {{ m.render_options(music, d=dict(defaults, duration=s.duration or defaults.duration, style=s.style or defaults.style)) }}
+      <button class="btn primary">🎬 Dựng video</button>
+    </form>
+    <form method="post" action="/scripts/{{ s.id }}/delete" class="inline"><button class="btn link danger">Xóa kịch bản</button></form>
+  </details>
+  {% else %}<p class="muted">Chưa có kịch bản.</p>{% endfor %}
+</section>
+
+<section class="card">
+  <h2>Video của sản phẩm</h2>
+  <table class="tbl" id="pvideos">
+    {% for v in videos %}
+    <tr><td><a href="/videos/{{ v.id }}">Video #{{ v.id }}</a></td><td>{{ m.status(v.status) }}</td>
+      <td>{{ v.progress }}%</td><td class="muted">{{ (v.message or '')[:120] }}</td><td>{{ v.created_at }}</td></tr>
+    {% else %}<tr><td class="muted">Chưa có video.</td></tr>{% endfor %}
+  </table>
+</section>
+{% endblock %}
+{% block scripts %}<script>pollProduct({{ p.id }}, {{ scripts|length }}, {{ videos|length }});</script>{% endblock %}

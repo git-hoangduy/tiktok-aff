@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m with context %}
+{% block content %}
+<div class="head"><h1>Tạo video</h1></div>
+<form class="card" method="post" action="/create" enctype="multipart/form-data" id="createForm">
+  <h2>1. Ảnh sản phẩm <small class="muted">(1–10 ảnh: mặt trước, sau, bên, chi tiết, bao bì)</small></h2>
+  <label class="drop" id="drop">
+    <input type="file" name="images" accept="{{ accept }}" multiple required id="imgInput">
+    <span>Kéo thả ảnh vào đây hoặc bấm để chọn<br>
+      <small>JPG, JFIF, PNG, WEBP, AVIF, HEIC, GIF, BMP, TIFF · ảnh lấy từ Shopee/TikTok (có nền, chữ, tay cầm) cũng được — AI tự tìm sản phẩm chính</small></span>
+  </label>
+  <div class="previews" id="previews"></div>
+
+  <h2>2. Thông tin sản phẩm</h2>
+  <div class="grid2">
+    <label>Tên sản phẩm <input name="name" placeholder="VD: Serum dưỡng ẩm ABC 30ml"></label>
+    <label>Ngành hàng
+      <select name="category"><option value="auto">Tự nhận diện</option>
+        {% for k, v in CATEGORIES.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select>
+    </label>
+    <label>Giá bán (không bắt buộc) <input name="price" placeholder="VD: 199.000đ"></label>
+    <label>Link sản phẩm (không bắt buộc) <input name="link" placeholder="https://..."></label>
+  </div>
+  <label>Công dụng / thông tin bạn cung cấp <small class="muted">(AI chỉ dùng thông tin này, không tự bịa)</small>
+    <textarea name="user_info" rows="4" placeholder="Mỗi ý một dòng. VD:&#10;Dưỡng ẩm, thấm nhanh&#10;Chai 30ml nhỏ gọn mang đi du lịch"></textarea>
+  </label>
+
+  <label>Link video TikTok hot để tham khảo <small class="muted">(không bắt buộc · mỗi link một dòng · AI sẽ so sánh và học format, không sao chép)</small>
+    <textarea name="ref_links" rows="2" placeholder="https://www.tiktok.com/@shop/video/123..."></textarea>
+  </label>
+  <p class="muted small">Trước khi viết kịch bản, hệ thống tự tìm video đang hot và bài viết xu hướng TikTok mới nhất của ngành hàng để so sánh.</p>
+
+  <h2>3. Cấu hình video</h2>
+  {{ m.render_options(music, show_versions=True) }}
+  {% if not has_key %}<p class="note">Chưa có GEMINI_API_KEY → hệ thống dùng kịch bản mẫu offline (chỉ dựa trên thông tin bạn nhập). Thêm key vào file <code>.env</code> để AI tự phân tích ảnh.</p>{% endif %}
+
+  <div class="actions">
+    <label class="check"><input type="checkbox" name="review_first" value="1"> Cho tôi duyệt / sửa kịch bản trước khi dựng</label>
+    <button class="btn primary big" type="submit" id="goBtn">TẠO VIDEO</button>
+  </div>
+</form>
+{% endblock %}
+{% block scripts %}<script>initUpload();</script>{% endblock %}

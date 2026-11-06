@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m with context %}
+{% block content %}
+<div class="head">
+  <h1>Video #{{ v.id }} <small class="muted">· <a href="/products/{{ v.product_id }}">{{ v.pname or 'Sản phẩm' }}</a></small></h1>
+  <div class="inline">
+    <form method="post" action="/videos/{{ v.id }}/rerender" onsubmit="return confirm('Dựng lại toàn bộ (ảnh nền + giọng mới)?')"><button class="btn">↻ Dựng lại toàn bộ</button></form>
+    <form method="post" action="/videos/{{ v.id }}/delete" onsubmit="return confirm('Xóa video này?')"><button class="btn danger">Xóa</button></form>
+  </div>
+</div>
+
+<div class="card statusbar" id="vstatus" data-vid="{{ v.id }}" data-status="{{ v.status }}">
+  {{ m.status(v.status) }}
+  <div class="progress"><div style="width: {{ v.progress }}%"></div></div>
+  <span id="vmsg">{{ v.message }}</span>
+</div>
+
+<div class="cols video-cols">
+  <section class="card player">
+    {% if v.output_path %}
+      <video src="/media/{{ v.output_path }}?t={{ v.updated_at }}" controls playsinline></video>
+      <div class="actions">
+        <a class="btn primary" href="/videos/{{ v.id }}/download">⬇ Tải MP4</a>
+        {% if v.srt_path %}<a class="btn" href="/media/{{ v.srt_path }}" download>Phụ đề .srt</a>{% endif %}
+      </div>
+      {% if script.caption or script.hashtags %}
+      <label>Caption đăng TikTok
+        <textarea rows="3" onclick="this.select()" readonly>{{ script.caption }} {{ (script.hashtags or []) | join(' ') }}</textarea></label>
+      {% endif %}
+      <p class="muted">{{ v.duration }} giây · 1080×1920 · H.264/AAC · {{ STYLE_LABELS.get(cfg.style, cfg.style) }} · {{ {'female':'giọng nữ','male':'giọng nam','none':'không giọng đọc, không phụ đề'}.get(cfg.voice, cfg.voice) }}</p>
+      {% if cfg.image_mode == 'ai_pro' or cfg.ai_motion %}<p class="warn">Video này dùng dịch vụ trả phí (Pollinations{{ ': ảnh AI Pro' if cfg.image_mode == 'ai_pro' }}{{ ', chuyển động ' ~ cfg.ai_motion if cfg.ai_motion }}). Tạo lại cảnh có ảnh mới sẽ tốn thêm pollen; dựng lại toàn bộ thì dùng lại ảnh/clip đã có.</p>{% endif %}
+    {% else %}<div class="ph tall">Video chưa sẵn sàng</div>{% endif %}
+  </section>
+
+  <section class="card">
+    <h2>Các cảnh — tạo lại từng cảnh nếu chưa ưng</h2>
+    {% for sc in scenes %}
+    <div class="scene">
+      {% if sc.frame_path %}<img src="/media/{{ sc.frame_path }}?t={{ v.updated_at }}" alt="">{% else %}<div class="ph"></div>{% endif %}
+      <form method="post" action="/videos/{{ v.id }}/scenes/{{ sc.idx }}" class="grow">
+        <div class="muted small">Cảnh {{ sc.idx + 1 }} · {{ sc.visual }} · {{ sc.motion }} · nền: {{ sc.bg_provider or '?' }} · {{ '%.1f' % (sc.slot or 0) }}s</div>
+        <textarea name="text" rows="2">{{ sc.text }}</textarea>
+        <input name="bg_prompt" value="{{ sc.bg_prompt }}" title="Prompt ảnh nền">
+        <div class="row">
+          <select name="image_index">{% for im in images %}<option value="{{ loop.index0 }}" {{ 'selected' if loop.index0 == sc.image_index % (images|length) }}>Ảnh {{ loop.index }}</option>{% endfor %}</select>
+          <select name="motion">{% for mo in ALL_MOTIONS %}<option {{ 'selected' if mo==sc.motion }}>{{ mo }}</option>{% endfor %}</select>
+          <label class="check"><input type="checkbox" name="new_background" value="1" checked> Ảnh nền mới</label>
+          <button class="btn small">Tạo lại cảnh</button>
+        </div>
+      </form>
+    </div>
+    {% else %}<p class="muted">Các cảnh sẽ hiện ở đây khi đang dựng.</p>{% endfor %}
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}<script>pollVideo({{ v.id }}, "{{ v.status }}");</script>{% endblock %}

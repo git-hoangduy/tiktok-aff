@@ -1,0 +1,53 @@
+{% macro status(s) -%}
+<span class="badge st-{{ s }}">{{ {'queued':'Đang chờ','running':'Đang xử lý','done':'Hoàn thành','error':'Lỗi','ready':'Sẵn sàng','new':'Mới'}.get(s, s) }}</span>
+{%- endmacro %}
+
+{# d = default values (the product's last settings / the script's own duration & style) #}
+{% macro render_options(music, prefix='', show_versions=False, d={}) -%}
+{% set dur = (d.duration or 30)|string %}{% set vol_v = d.voice_volume if d.voice_volume is not none else 1.0 %}
+{% set vol_m = d.music_volume if d.music_volume is not none else 0.15 %}
+<div class="grid4">
+  <label>Thời lượng
+    <select name="duration">{% for s in ['15','30','45'] %}<option value="{{ s }}" {{ 'selected' if s == dur }}>{{ s }} giây</option>{% endfor %}</select>
+  </label>
+  <label>Giọng đọc
+    <select name="voice"><option value="female">Nữ (Gemini Leda)</option><option value="male" {{ 'selected' if d.voice == 'male' }}>Nam (Edge NamMinh)</option><option value="none" {{ 'selected' if d.voice == 'none' }}>Không giọng đọc + không phụ đề</option></select>
+  </label>
+  <label>Phong cách
+    <select name="style">{% for k, v in STYLE_LABELS.items() %}<option value="{{ k }}" {{ 'selected' if k == d.style }}>{{ v }}</option>{% endfor %}</select>
+  </label>
+  {% if show_versions %}
+  <label>Số phiên bản
+    <select name="versions">{% for n in [1,2,3] %}<option value="{{ n }}" {{ 'selected' if n == d.versions }}>{{ n }} video</option>{% endfor %}</select>
+  </label>
+  {% endif %}
+  <label>Ảnh sản phẩm
+    {% set pi = paid_info() %}
+    <select name="image_mode"><option value="ai">AI tái tạo ảnh mới — miễn phí (FLUX Kontext)</option>
+      <option value="ai_pro" {{ 'selected' if d.image_mode == 'ai_pro' }} {{ '' if pi.available else 'disabled' }}>AI Pro — {{ pi.edit_model }} ≈ {{ pi.image_cost }}–{{ pi.image_cost_max }} pollen/video{{ '' if pi.available else ' (cần POLLINATIONS_TOKEN)' }}</option>
+      <option value="composite" {{ 'selected' if d.image_mode == 'composite' }}>Ghép ảnh thật (tách nền)</option></select>
+  </label>
+  <label>Chuyển động AI thật (trả phí)
+    <select name="ai_motion"><option value="">Không — chuyển động FFmpeg miễn phí</option>
+      {% for m, c in pi.motion.items() %}<option value="{{ m }}" {{ 'selected' if d.ai_motion == m }} {{ '' if pi.available else 'disabled' }}>{{ m }} — {{ pi.motion_scenes }} cảnh ≈ {{ c }} pollen/video</option>{% endfor %}
+    </select>
+  </label>
+  <label>Nhạc nền
+    <select name="music"><option value="">Không có nhạc</option>{% for m in music %}<option value="{{ m }}" {{ 'selected' if m == d.music }}>{{ m }}</option>{% endfor %}</select>
+  </label>
+  <label>Âm lượng giọng <output>{{ vol_v }}</output>
+    <input type="range" name="voice_volume" min="0" max="2" step="0.1" value="{{ vol_v }}" oninput="this.previousElementSibling.value=this.value">
+  </label>
+  <label>Âm lượng nhạc <output>{{ vol_m }}</output>
+    <input type="range" name="music_volume" min="0" max="1" step="0.05" value="{{ vol_m }}" oninput="this.previousElementSibling.value=this.value">
+  </label>
+  <label class="check"><input type="checkbox" name="local_only" value="1" {{ 'checked' if d.local_only }}> Chỉ xử lý local (ảnh nền tự tạo, không gọi API ảnh)</label>
+</div>
+{%- endmacro %}
+
+{# small duration/style pickers used by the "analyze again" / "new scripts" buttons #}
+{% macro quick_options(d={}) -%}
+{% set dur = (d.duration or 30)|string %}
+<select name="style">{% for k, v in STYLE_LABELS.items() %}<option value="{{ k }}" {{ 'selected' if k == d.style }}>{{ v }}</option>{% endfor %}</select>
+<select name="duration">{% for s in ['15','30','45'] %}<option value="{{ s }}" {{ 'selected' if s == dur }}>{{ s }}s</option>{% endfor %}</select>
+{%- endmacro %}

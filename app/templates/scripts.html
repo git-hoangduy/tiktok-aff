@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="head"><h1>Kịch bản</h1></div>
+<section class="card">
+  {% if scripts %}
+  <table class="tbl">
+    <tr><th>#</th><th>Sản phẩm</th><th>Tiêu đề</th><th>Hook</th><th>Phong cách</th><th>Nguồn</th><th></th></tr>
+    {% for s in scripts %}
+    <tr><td>{{ s.id }}</td><td>{{ s.pname }}</td><td>{{ s.data.title }}</td><td class="muted">{{ s.data.hook }}</td>
+      <td>{{ STYLE_LABELS.get(s.style, s.style) }} · {{ s.duration }}s</td><td>{{ s.source }}</td>
+      <td><a class="btn small" href="/products/{{ s.product_id }}#script-{{ s.id }}">Sửa / Dựng</a></td></tr>
+    {% endfor %}
+  </table>
+  {% else %}<p class="muted">Chưa có kịch bản.</p>{% endif %}
+</section>
+{% endblock %}

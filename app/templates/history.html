@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m with context %}
+{% block content %}
+<div class="head"><h1>Video &amp; Lịch sử</h1></div>
+<section class="card">
+  {% if videos %}
+  <table class="tbl">
+    <tr><th></th><th>Video</th><th>Sản phẩm</th><th>Trạng thái</th><th>Thời lượng</th><th>Ngày tạo</th><th></th></tr>
+    {% for v in videos %}
+    <tr>
+      <td>{% if v.thumb_path %}<img class="mini" src="/media/{{ v.thumb_path }}" alt="">{% endif %}</td>
+      <td><a href="/videos/{{ v.id }}">#{{ v.id }}</a></td>
+      <td><a href="/products/{{ v.product_id }}">{{ v.pname or 'Sản phẩm' }}</a></td>
+      <td>{{ m.status(v.status) }} {% if v.status in ('running','queued') %}{{ v.progress }}%{% endif %}</td>
+      <td>{{ v.duration or '' }}{{ 's' if v.duration }}</td>
+      <td>{{ v.created_at }}</td>
+      <td class="inline">
+        {% if v.output_path %}<a class="btn small" href="/videos/{{ v.id }}/download">⬇ MP4</a>{% endif %}
+        <form method="post" action="/videos/{{ v.id }}/delete" onsubmit="return confirm('Xóa video #{{ v.id }}?')"><button class="btn small danger">Xóa</button></form>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}<p class="muted">Chưa có video nào.</p>{% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m with context %}
+{% block content %}
+<div class="head"><h1>Dashboard</h1><a class="btn primary" href="/create">＋ Tạo video mới</a></div>
+
+<div class="stats">
+  <div class="stat"><b>{{ stats.videos_done }}</b><span>Video đã tạo</span></div>
+  <div class="stat"><b>{{ stats.videos_today }}</b><span>Video hôm nay</span></div>
+  <div class="stat"><b>{{ stats.products }}</b><span>Sản phẩm</span></div>
+  <div class="stat"><b>{{ stats.scripts }}</b><span>Kịch bản</span></div>
+</div>
+
+<div class="cols">
+  <section class="card">
+    <h2>Video gần đây</h2>
+    {% if recent %}
+    <div class="vgrid">
+      {% for v in recent %}
+      <a class="vthumb" href="/videos/{{ v.id }}">
+        {% if v.thumb_path %}<img src="/media/{{ v.thumb_path }}" alt="">{% else %}<div class="ph">#{{ v.id }}</div>{% endif %}
+        <div><b>{{ v.pname or 'Sản phẩm' }}</b><br>{{ m.status(v.status) }}</div>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}<p class="muted">Chưa có video. Bấm “Tạo video mới” để bắt đầu.</p>{% endif %}
+  </section>
+
+  <section class="card">
+    <h2>Trạng thái hệ thống</h2>
+    <ul class="sys">
+      <li class="{{ 'ok' if system.ffmpeg else 'bad' }}">FFmpeg: {{ system.ffmpeg or 'CHƯA CÀI — winget install Gyan.FFmpeg' }}</li>
+      <li class="{{ 'ok' if system.gemini else 'warn' }}">Gemini: {{ ('đã có key · ' ~ system.gemini_model) if system.gemini else 'chưa có key → dùng kịch bản mẫu offline' }}</li>
+      <li>Ảnh nền: {{ system.bg_providers | join(' → ') }}{% if system.gemini_image %} (Gemini image: {{ system.gemini_image }}){% endif %}</li>
+      <li class="{{ 'ok' if system.font else 'warn' }}">Font phụ đề: {{ system.font or 'không tìm thấy' }}</li>
+      <li>Hàng đợi: {{ system.queue }} tác vụ</li>
+      <li class="{{ 'ok' if system.pollen is not none else 'warn' }}">Pollinations (trả phí): {{ ('số dư ' ~ '%.3f'|format(system.pollen) ~ ' pollen') if system.pollen is not none else 'chưa có key sk_ → chỉ dùng chế độ miễn phí' }}</li>
+    </ul>
+    <h2>Lượt gọi API hôm nay</h2>
+    <table class="tbl">
+      <tr><th>Dịch vụ</th><th>Lượt</th><th>Thành công</th><th>Token vào / ra</th><th>Chi phí</th></tr>
+      {% for u in usage_today %}<tr><td>{{ u.provider }}</td><td>{{ u.calls }}</td><td>{{ u.ok }}</td><td>{{ '{:,}'.format(u.tin or 0) }} / {{ '{:,}'.format(u.tout or 0) }}</td><td>{{ ('%.3f pollen'|format(u.cost)) if u.cost else '0' }}</td></tr>
+      {% else %}<tr><td colspan="5" class="muted">Chưa gọi API nào hôm nay</td></tr>{% endfor %}
+    </table>
+    <details><summary>Tổng từ trước đến nay & log gần nhất</summary>
+      <table class="tbl">
+        {% for u in usage_all %}<tr><td>{{ u.provider }}</td><td>{{ u.calls }} lượt</td><td>{{ u.ok }} OK</td><td>{{ '{:,}'.format((u.tin or 0) + (u.tout or 0)) }} token</td></tr>{% endfor %}
+      </table>
+      <table class="tbl small">
+        {% for u in usage_recent %}<tr><td>{{ u.created_at[11:] }}</td><td>{{ u.provider }}</td><td>{{ '✔' if u.success else '✘' }}</td><td>{{ (u.note or '')[:90] }}</td></tr>{% endfor %}
+      </table>
+    </details>
+  </section>
+</div>
+{% endblock %}

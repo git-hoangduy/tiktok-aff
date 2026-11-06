@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m with context %}
+{% block content %}
+<div class="head"><h1>Sản phẩm</h1><a class="btn primary" href="/create">＋ Thêm sản phẩm</a></div>
+{% if products %}
+<div class="pgrid">
+  {% for p in products %}
+  <a class="pcard card" href="/products/{{ p.id }}">
+    {% if p.img %}<img src="/media/{{ p.img }}" alt="">{% endif %}
+    <div class="pbody">
+      <b>{{ p.name or ('Sản phẩm #' ~ p.id) }}</b>
+      <div class="muted">{{ p.price or '' }}</div>
+      <div>{{ m.status(p.status) }} · {{ p.nvideos }} video</div>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% else %}<p class="card muted">Chưa có sản phẩm nào.</p>{% endif %}
+{% endblock %}

@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}AI TikTok Affiliate{% endblock %}</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<aside class="sidebar">
+  <div class="brand">▶ Aff<span>Video</span></div>
+  <nav>
+    <a href="/" class="{{ 'on' if active=='dashboard' }}">Dashboard</a>
+    <a href="/create" class="{{ 'on' if active=='create' }}">＋ Tạo video</a>
+    <a href="/products" class="{{ 'on' if active in ('products','product') }}">Sản phẩm</a>
+    <a href="/scripts" class="{{ 'on' if active=='scripts' }}">Kịch bản</a>
+    <a href="/history" class="{{ 'on' if active in ('history','video') }}">Video &amp; Lịch sử</a>
+  </nav>
+  <div class="side-foot">Chạy local · Free Mode</div>
+</aside>
+<main>
+  {% block content %}{% endblock %}
+</main>
+<script src="/static/app.js"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>
